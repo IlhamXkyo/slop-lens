@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SlopLens — Anti-Slop Stylometrics & Heuristic AI Linter</title>
+  <meta name="description" content="Real-time anti-slop stylometric inspector, burstiness analyzer, and heuristic AI writing detector based on 2026 model patterns.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-dark">
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          <line x1="11" y1="8" x2="11" y2="14"></line>
+          <line x1="8" y1="11" x2="14" y2="11"></line>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">SlopLens</h1>
+        <span class="brand-tag">Stylometric AI Writing Linter</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="control-group">
+        <label for="sampleSelect" class="control-label">Load Preset:</label>
+        <select id="sampleSelect" class="select-input">
+          <option value="" disabled selected>Select Benchmark Sample</option>
+          <option value="corporate_slop">Corporate AI Slop (GPT-5/Claude)</option>
+          <option value="claude_philosopher">Academic Dialect (Opus 4.5)</option>
+          <option value="authentic_human">Authentic Human Prose (Irregular)</option>
+          <option value="indonesian_slop">Bahasa Indonesia AI Slop</option>
+        </select>
+      </div>
+
+      <div class="action-buttons">
+        <button id="stripDashesBtn" class="btn btn-secondary" title="Remove all em-dashes and en-dashes with zero-dash compliance">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Strip Dashes
+        </button>
+        <button id="copyBtn" class="btn btn-secondary" title="Copy text to clipboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+        <button id="exportBtn" class="btn btn-secondary" title="Export audit report as JSON">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export JSON
+        </button>
+        <button id="themeToggleBtn" class="btn btn-icon" title="Toggle Dark/Light Mode">
+          <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="workbench-layout">
+    <!-- Left Pane: Synchronized Editor -->
+    <section class="editor-pane">
+      <div class="pane-header">
+        <span class="pane-title">Document Source</span>
+        <div class="legend-pills">
+          <span class="legend-pill pill-puffer">Puffers & Verbs</span>
+          <span class="legend-pill pill-phrase">AI Formulas</span>
+          <span class="legend-pill pill-dash">Banned Dashes</span>
+        </div>
+      </div>
+
+      <div class="editor-workspace" id="editorContainer">
+        <div class="line-gutter" id="lineGutter"></div>
+        <div class="editor-layers">
+          <div class="backdrop" id="backdrop">
+            <div class="highlights" id="highlights"></div>
+          </div>
+          <textarea id="editorInput" placeholder="Paste or type article, essay, or draft here to audit for AI slop patterns..." spellcheck="false"></textarea>
+        </div>
+      </div>
+
+      <div class="editor-statusbar">
+        <div class="stat-item"><span id="wordCountStat">0</span> words</div>
+        <div class="stat-item"><span id="sentenceCountStat">0</span> sentences</div>
+        <div class="stat-item"><span id="paragraphCountStat">0</span> paragraphs</div>
+        <div class="stat-item"><span id="charCountStat">0</span> chars</div>
+        <div class="stat-spacer"></div>
+        <button id="clearBtn" class="link-btn">Clear Canvas</button>
+      </div>
+    </section>
+
+    <!-- Right Pane: Telemetry & Inspector -->
+    <section class="telemetry-pane">
+      <!-- Score Overview Card -->
+      <div class="score-card">
+        <div class="score-dial">
+          <div class="score-number" id="scoreDisplay">100</div>
+          <div class="score-denominator">/ 100</div>
+        </div>
+        <div class="score-meta">
+          <div class="score-tier" id="tierDisplay">Authentic Human Flow</div>
+          <div class="score-desc" id="tierDesc">Text exhibits natural burstiness and avoids formulaic LLM constructs.</div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-box" id="burstinessBox">
+          <div class="metric-label">Burstiness (CV)</div>
+          <div class="metric-value" id="burstinessVal">0.00</div>
+          <div class="metric-status" id="burstinessStatus">N/A</div>
+        </div>
+
+        <div class="metric-box" id="cadenceTrapBox">
+          <div class="metric-label">17-23w Cadence Trap</div>
+          <div class="metric-value" id="cadenceTrapVal">0 runs</div>
+          <div class="metric-status" id="cadenceTrapStatus">Clean</div>
+        </div>
+
+        <div class="metric-box" id="dashBox">
+          <div class="metric-label">Em/En Dasushes</div>
+          <div class="metric-value" id="dashCountVal">0</div>
+          <div class="metric-status" id="dashStatus">Zero Compliant</div>
+        </div>
+
+        <div class="metric-box" id="colonBox">
+          <div class="metric-label">Colon Density</div>
+          <div class="metric-value" id="colonDensityVal">0.0</div>
+          <div class="metric-status" id="colonStatus">Normal (<2.5/300w)</div>
+        </div>
+      </div>
+
+      <!-- Cadence Waveform Visualizer -->
+      <div class="visualizer-card">
+        <div class="visualizer-header">
+          <span class="visualizer-title">Sentence Length Distribution (Burstiness Waveform)</span>
+          <span class="visualizer-tip">Hover bars to view length</span>
+        </div>
+        <div class="canvas-container">
+          <canvas id="cadenceCanvas" width="500" height="90"></canvas>
+        </div>
+        <div class="canvas-legend">
+          <span class="legend-indicator dot-short">Short (≤6w)</span>
+          <span class="legend-indicator dot-normal">Normal (7-16w / 24-25w)</span>
+          <span class="legend-indicator dot-trap">AI Trap Zone (17-23w)</span>
+          <span class="legend-indicator dot-long">Long (≥26w)</span>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="inspector-tabs">
+        <button class="tab-btn active" data-tab="violationsTab">
+          Violations (<span id="violationCountBadge">0</span>)
+        </button>
+        <button class="tab-btn" data-tab="structureTab">
+          Cadence & Openers
+        </button>
+        <button class="tab-btn" data-tab="deductionsTab">
+          Audit Deductions
+        </button>
+      </div>
+
+      <!-- Tab 1: Violations -->
+      <div class="tab-content active" id="violationsTab">
+        <div class="violations-list" id="violationsList">
+          <div class="empty-state">No violations detected. Text is completely clean of flagged lexicon patterns!</div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Structure -->
+      <div class="tab-content" id="structureTab">
+        <div class="structure-details" id="structureDetails">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Deductions -->
+      <div class="tab-content" id="deductionsTab">
+        <div class="deductions-list" id="deductionsList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
