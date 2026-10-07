@@ -121,7 +121,6 @@ class SlopLensApp {
 
   handleInput() {
     this.updateGutter();
-    this.updateStatusbarCounts();
 
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
@@ -144,16 +143,11 @@ class SlopLensApp {
     this.lineGutter.innerHTML = gutterHtml;
   }
 
-  updateStatusbarCounts() {
-    const text = this.editorInput.value;
-    const words = text.match(/[\p{L}\p{N}'-]+/gu) || [];
-    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-    const sentences = text.match(/[^.!?\n]+[.!?]+(?:\s+|$)|[^.!?\n]+$/g) || [];
-
-    this.wordCountStat.textContent = words.length;
-    this.sentenceCountStat.textContent = sentences.length;
-    this.paragraphCountStat.textContent = paragraphs.length;
-    this.charCountStat.textContent = text.length;
+  updateStatusbarCounts(stats) {
+    this.wordCountStat.textContent = stats.wordCount;
+    this.sentenceCountStat.textContent = stats.sentenceCount;
+    this.paragraphCountStat.textContent = stats.paragraphCount;
+    this.charCountStat.textContent = stats.charCount;
   }
 
   loadSample(key) {
@@ -170,6 +164,7 @@ class SlopLensApp {
     const result = this.analyzer.analyze(text);
     this.currentAnalysis = result;
 
+    this.updateStatusbarCounts(result.stats);
     this.renderTelemetry(result);
     this.renderHighlights(text, result.violations);
     this.renderCanvasWaveform(result.cadence.sentences);
